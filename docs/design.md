@@ -84,11 +84,16 @@ Phases are G0 to G4, so they do not clash with the other repos' phases.
 
 ## G0 questions
 
-| Question | Options |
-|---|---|
-| The port | A fixed port, not REDnode's 41820, so EDGEchat's plugin can name the URL |
-| Several windows | Each window has its own extension host, and only one can listen. The first window owns the port and passes requests to the window the modder is in, or each window tries in turn and the focused one takes over. To test |
-| Sign-in | OAuth as REDnode (approval in an editor notification), or a token the plugin asks for once |
-| The contract | The `package.json` key above, or each extension registers itself at start through EDGEguide's exported API |
-| `ui_run`'s asking | The client's prompt (`requiresUserInteraction`) only, or also a notification in the editor |
-| Where hints draw in EDGEkit | A command in EDGEkit's app (`edgekit.pointAt`), which EDGEguide calls when it exists |
+Proposed answers, with EDGEchat's view from the plugin's side (2026-10-26). None is decided yet.
+
+| Question | Proposed | Why |
+|---|---|---|
+| The port | **41821**, fixed, next to REDnode's 41820 (free on the dev PC and unused by the EDGE repos, checked 2026-10-26) | EDGEchat's plugin entry is then the URL alone, like `rednode`'s: `{ "type": "http", "url": "http://127.0.0.1:41821/mcp" }`. EDGEchat adds it in G4 |
+| Sign-in | **OAuth as REDnode 0.40.1**, with the approval in an editor notification. No token option | EDGEchat dropped REDnode's token option in plugin 0.0.13 because copying tokens was the pain; Claude Code's OAuth for a plugin HTTP server is tested |
+| Which window | **The focused window, else the last focused one** | Every Claude Code session on the PC connects to the same URL (each window's Claude panel, EDGEkit's, a terminal `claude`), so the connection cannot name a window. A header naming the window (`${VAR}` in an HTTP server's headers) is an unverified idea, and Claude Code has no per-window variable, so not relied on |
+| Several windows, one port | The first window to start listens; the others connect to it over a local channel and report focus (`window.state.focused`). The listening window passes each call to the window chosen above | Each window has its own extension host and only one can listen |
+| The listening window closes | The others try to listen in turn; one takes over. Claude Code reconnects from `/mcp` without a restart | EDGEchat's ask |
+| No editor window open | No extension host runs, so nothing listens: the connection is refused. `/edge:setup` reports that as "no editor open", not as a failure | The server cannot answer when no window runs it; EDGEchat asked for a plain answer |
+| `ui_run`'s asking | **`requiresUserInteraction` on every command that changes things**, always. An editor notification may come on top, never instead | The rule REDnode and edgedeck-mcp follow, and the one EDGEchat's safety text relies on |
+| The contract | The `package.json` key above, or each extension registering itself at start through EDGEguide's exported API | Open: the EDGE extensions' sessions have a say |
+| Where hints draw in EDGEkit | A command in EDGEkit's app (`edgekit.pointAt`), which EDGEguide calls when it exists | Open: EDGEkit's side |
