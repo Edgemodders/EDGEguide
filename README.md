@@ -17,7 +17,7 @@ It is an editor extension with a local MCP server that [Claude Code](https://cod
 **[Docs](https://edgemodders.github.io/EDGEguide/)** · [Design](https://edgemodders.github.io/EDGEguide/design.html) · [EDGEkit](https://github.com/Edgemodders/EDGEkit) · [EDGEchat](https://github.com/Edgemodders/EDGEchat)
 
 > [!NOTE]
-> **Status: G0, design.** Nothing is built yet. The design draft says what it will do and what the editor allows.
+> **Status: G0, design.** Nothing is built yet, and there is no release. The design draft says what it will do and what the editor allows. The G0 questions have proposed answers (2026-10-26); none is decided yet. Next: G0's decisions with the owner, then G1, the skeleton.
 
 ## License
 
