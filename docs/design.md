@@ -84,11 +84,11 @@ Phases are G0 to G4, so they do not clash with the other repos' phases.
 
 ## G0 decisions
 
-Proposed on 2026-10-26, with EDGEchat's view from the plugin's side; **decided by the owner on 2026-11-25** as proposed, in the EDGEchat session (EDGEguide has no session of its own yet). Port 41821 was checked again that day: still free on the dev PC and unused in the EDGE repos.
+Proposed on 2026-10-26, with EDGEchat's view from the plugin's side; **decided by the owner on 2026-11-25** in the EDGEchat session (EDGEguide has no session of its own yet), as proposed but for the port: 41821 has been REDnode's since 0.57.1 (2026-11-04), for a host run from its repo or by a test (REDnode's `docs/mcp.md`), so EDGEguide takes **41822**, unused in the EDGE repos (checked 2026-11-25).
 
 | Question | Decided | Why |
 |---|---|---|
-| The port | **41821**, fixed, next to REDnode's 41820 (free on the dev PC and unused by the EDGE repos, checked 2026-10-26) | EDGEchat's plugin entry is then the URL alone, like `rednode`'s: `{ "type": "http", "url": "http://127.0.0.1:41821/mcp" }`. EDGEchat adds it in G4 |
+| The port | **41822**, fixed, beside REDnode's 41820 (the game's) and 41821 (REDnode run from its repo or by a test, since 0.57.1). 41821 was proposed on 2026-10-26, before REDnode took it | EDGEchat's plugin entry is then the URL alone, like `rednode`'s: `{ "type": "http", "url": "http://127.0.0.1:41822/mcp" }`. EDGEchat adds it in G4 |
 | Sign-in | **OAuth as REDnode 0.40.1**, with the approval in an editor notification. No token option | EDGEchat dropped REDnode's token option in plugin 0.0.13 because copying tokens was the pain; Claude Code's OAuth for a plugin HTTP server is tested |
 | Which window | **The focused window, else the last focused one** | Every Claude Code session on the PC connects to the same URL (each window's Claude panel, EDGEkit's, a terminal `claude`), so the connection cannot name a window. A header naming the window (`${VAR}` in an HTTP server's headers) is an unverified idea, and Claude Code has no per-window variable, so not relied on |
 | Several windows, one port | The first window to start listens; the others connect to it over a local channel and report focus (`window.state.focused`). The listening window passes each call to the window chosen above | Each window has its own extension host and only one can listen |

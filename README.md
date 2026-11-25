@@ -17,7 +17,7 @@ It is an editor extension with a local MCP server that [Claude Code](https://cod
 **[Docs](https://edgemodders.github.io/EDGEguide/)** · [Design](https://edgemodders.github.io/EDGEguide/design.html) · [EDGEkit](https://github.com/Edgemodders/EDGEkit) · [EDGEchat](https://github.com/Edgemodders/EDGEchat)
 
 > [!NOTE]
-> **Status: G0 decided (2026-11-25), G1 next.** Nothing is built yet, and there is no release. The design says what it will do and what the editor allows, and its G0 decisions settle the port (41821), the sign-in (OAuth, approved in the editor), which window answers and the contract with the EDGE extensions. Next: G1, the skeleton.
+> **Status: G0 decided (2026-11-25), G1 next.** Nothing is built yet, and there is no release. The design says what it will do and what the editor allows, and its G0 decisions settle the port (41822), the sign-in (OAuth, approved in the editor), which window answers and the contract with the EDGE extensions. Next: G1, the skeleton.
 
 ## License
 
