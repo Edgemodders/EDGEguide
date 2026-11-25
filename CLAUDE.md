@@ -5,7 +5,8 @@ EDGEguide is an editor extension (`edgemodders.edgeguide`) with a local MCP serv
 ## Status and next step
 
 - Scaffold created 2026-10-26 from the EDGEkit session (asked by EDGEchat in EDGEkit#6; the user decided an extension of its own, named EDGEguide, and created the repo): README, license, docs site (HUD layout, design draft 0.1), Pages workflow, brand sources and images (`tools/brand/render.ps1`). No extension code yet.
-- **Next: G0**, the questions at the end of the design (port, several windows, sign-in, the contract with the EDGE extensions). Then G1, the skeleton.
+- **G0 decided** by the owner on 2026-11-25, as proposed, in the EDGEchat session (EDGEguide has no session of its own; the owner asked EDGEchat's to move it along): port 41821, OAuth as REDnode with the approval in an editor notification, the focused window answers, the `package.json` contract key, `edgekit.pointAt` asked of EDGEkit in G3. Design, "G0 decisions".
+- **Next: G1**, the skeleton: the extension, the MCP server and its sign-in, `ui_open`, `ui_run` with the allow-list, `ui_state` from public state.
 
 ## Conventions
 

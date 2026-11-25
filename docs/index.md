@@ -4,15 +4,15 @@ EDGEguide lets Claude Code show a modder how the EDGE tools work, in the editor 
 
 | Document | What it covers |
 |---|---|
-| [Design](design.html) | What EDGEguide is and is not, the facts it rests on, the tools, the contract with the EDGE extensions, phases G0 to G4 and the G0 questions |
+| [Design](design.html) | What EDGEguide is and is not, the facts it rests on, the tools, the contract with the EDGE extensions, phases G0 to G4 and the G0 decisions |
 
 ## Roadmap status
 
-As of 2026-10-26.
+As of 2026-11-25.
 
 | Phase | Status |
 |---|---|
-| G0 Decide | Under way: design draft 0.1 |
+| G0 Decide | Done 2026-11-25: [the decisions](design.html#g0-decisions) |
 | G1 Skeleton | Not started |
 | G2 Select | Not started |
 | G3 Hints | Not started |

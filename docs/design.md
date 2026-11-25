@@ -4,7 +4,7 @@ title: Design
 
 # EDGEguide design
 
-**Status: draft 0.1, G0 (decide). Nothing is built.** Created on 2026-10-26 from the EDGEkit session, after EDGEchat asked for it in [EDGEkit#6](https://github.com/Edgemodders/EDGEkit/issues/6) and the user decided it is an extension of its own, named EDGEguide.
+**Status: draft 0.2, G0 decided by the owner on 2026-11-25 ([G0 decisions](#g0-decisions)); next G1, the skeleton. Nothing is built.** Created on 2026-10-26 from the EDGEkit session, after EDGEchat asked for it in [EDGEkit#6](https://github.com/Edgemodders/EDGEkit/issues/6) and the user decided it is an extension of its own, named EDGEguide.
 
 ## What EDGEguide is
 
@@ -31,7 +31,7 @@ Today Claude does the work through the EDGE MCP servers (`redcode`, `edgedeck`, 
 | What is visible and selected inside a view only its owner knows; open editors and tabs are public (`window.tabGroups`) | VS Code API | `ui_state` is partly EDGEguide's own, partly the contract |
 | No extension API points at another extension's button. A webview's owner can mark anything inside it | VS Code API | Hints: a notification everywhere; inside a webview through its owner; in EDGEkit, an outline on any toolbar button from EDGEkit's own code |
 | `executeCommand` runs any registered command | VS Code API | `ui_run` keeps to an allow-list |
-| Each editor window has its own extension host | VS Code | Only one window can listen on the port (G0 question) |
+| Each editor window has its own extension host | VS Code | Only one window can listen on the port ([G0 decisions](#g0-decisions)) |
 
 ## The tools
 
@@ -47,7 +47,7 @@ Today Claude does the work through the EDGE MCP servers (`redcode`, `edgedeck`, 
 
 ## The contract with the EDGE extensions
 
-Proposed, for G0. Each EDGE extension declares what EDGEguide may do, in its own `package.json`, so that it stays the owner of its views and commands:
+Decided in G0 (2026-11-25): a key in each extension's `package.json`. Each EDGE extension declares what EDGEguide may do, in its own `package.json`, so that it stays the owner of its views and commands:
 
 ```json
 "edgeguide": {
@@ -68,7 +68,7 @@ Proposed, for G0. Each EDGE extension declares what EDGEguide may do, in its own
 | `state` | A command returning what its views show and what is selected |
 | `commands` | The allow-list for `ui_run`. `changes: true` makes the tool ask first |
 
-EDGEguide reads it from `vscode.extensions.all`. An extension without it gets only `ui_open` on its views. Asks go to REDcode, EDGEdeck, EDGEmat and EDGEwave once the contract is settled.
+EDGEguide reads it from `vscode.extensions.all`, which lists every installed extension's `package.json` without starting it. An extension without it gets only `ui_open` on its views. The asks go to REDcode, EDGEdeck, EDGEmat and EDGEwave in G2, with the key's final shape from G1.
 
 ## Phases
 
@@ -76,17 +76,17 @@ Phases are G0 to G4, so they do not clash with the other repos' phases.
 
 | Phase | Builds | The test proves |
 |---|---|---|
-| **G0 Decide** | The questions below answered | - |
+| **G0 Decide** | The questions below answered (done 2026-11-25) | - |
 | **G1 Skeleton** | The extension, the MCP server and its sign-in, `ui_open`, `ui_run` with the allow-list, `ui_state` from public state | Claude Code, signed in, opens EDGEdeck's Mods view and runs Deploy after asking |
 | **G2 Select** | The contract in the EDGE extensions; `ui_select` and the full `ui_state` | "Show me my mod" selects it in EDGEdeck |
 | **G3 Hints** | `ui_hint`: notifications, webview owners, and EDGEkit's toolbar outline | The Pack and Install walk-through, in EDGEkit and in VS Code |
 | **G4 Ship** | Published on Open VSX and the Marketplace, in the pack, built into EDGEkit; EDGEchat adds the server and `/edge:setup` checks it | A fresh EDGEkit install, with EDGEchat set up, shows the walk-through |
 
-## G0 questions
+## G0 decisions
 
-Proposed answers, with EDGEchat's view from the plugin's side (2026-10-26). None is decided yet.
+Proposed on 2026-10-26, with EDGEchat's view from the plugin's side; **decided by the owner on 2026-11-25** as proposed, in the EDGEchat session (EDGEguide has no session of its own yet). Port 41821 was checked again that day: still free on the dev PC and unused in the EDGE repos.
 
-| Question | Proposed | Why |
+| Question | Decided | Why |
 |---|---|---|
 | The port | **41821**, fixed, next to REDnode's 41820 (free on the dev PC and unused by the EDGE repos, checked 2026-10-26) | EDGEchat's plugin entry is then the URL alone, like `rednode`'s: `{ "type": "http", "url": "http://127.0.0.1:41821/mcp" }`. EDGEchat adds it in G4 |
 | Sign-in | **OAuth as REDnode 0.40.1**, with the approval in an editor notification. No token option | EDGEchat dropped REDnode's token option in plugin 0.0.13 because copying tokens was the pain; Claude Code's OAuth for a plugin HTTP server is tested |
@@ -95,5 +95,5 @@ Proposed answers, with EDGEchat's view from the plugin's side (2026-10-26). None
 | The listening window closes | The others try to listen in turn; one takes over. Claude Code reconnects from `/mcp` without a restart | EDGEchat's ask |
 | No editor window open | No extension host runs, so nothing listens: the connection is refused. `/edge:setup` reports that as "no editor open", not as a failure | The server cannot answer when no window runs it; EDGEchat asked for a plain answer |
 | `ui_run`'s asking | **`requiresUserInteraction` on every command that changes things**, always. An editor notification may come on top, never instead | The rule REDnode and edgedeck-mcp follow, and the one EDGEchat's safety text relies on |
-| The contract | The `package.json` key above, or each extension registering itself at start through EDGEguide's exported API | Open: the EDGE extensions' sessions have a say |
-| Where hints draw in EDGEkit | A command in EDGEkit's app (`edgekit.pointAt`), which EDGEguide calls when it exists | Open: EDGEkit's side |
+| The contract | **The `package.json` key above**, not each extension registering itself through an API | EDGEguide can read every installed extension's `package.json` without starting it; registering through an API needs each extension already running. The EDGE extensions' sessions still shape the key's fields in G2 |
+| Where hints draw in EDGEkit | **A command in EDGEkit's app, `edgekit.pointAt`**, which EDGEguide calls when it exists, and a notification otherwise | EDGEkit's side: asked of EDGEkit in G3 |
