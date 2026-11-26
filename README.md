@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://edgemodders.github.io/EDGEguide/"><img src="docs/assets/brand/badges/docs.svg" alt="docs: read the docs"></a>
-  <img src="docs/assets/brand/badges/status.svg" alt="status: G1 next">
+  <img src="docs/assets/brand/badges/status.svg" alt="status: G1 built">
   <img src="docs/assets/brand/badges/game.svg" alt="game: Cyberpunk 2077">
   <img src="docs/assets/brand/badges/for.svg" alt="for: EDGEkit and VS Code">
   <a href="LICENSE"><img src="docs/assets/brand/badges/license.svg" alt="license: MIT"></a>
@@ -17,7 +17,7 @@ It is an editor extension with a local MCP server that [Claude Code](https://cod
 **[Docs](https://edgemodders.github.io/EDGEguide/)** · [Design](https://edgemodders.github.io/EDGEguide/design.html) · [EDGEkit](https://github.com/Edgemodders/EDGEkit) · [EDGEchat](https://github.com/Edgemodders/EDGEchat)
 
 > [!NOTE]
-> **Status: G0 decided (2026-11-25), G1 next.** Nothing is built yet, and there is no release. The design says what it will do and what the editor allows, and its G0 decisions settle the port (41822), the sign-in (OAuth, approved in the editor), which window answers and the contract with the EDGE extensions. Next: G1, the skeleton.
+> **Status: G1 built (2026-11-26), its hand test next.** There is no release. The skeleton works in its tests: an MCP server in the editor on `127.0.0.1:41822`, a sign-in you allow in the editor, and three tools (`ui_state`, `ui_open`, and `ui_run`, which asks before every command). Next: the G1 test in the editor, then G2, selecting items in the EDGE tools' views. See the [design](https://edgemodders.github.io/EDGEguide/design.html#g1-as-built).
 
 ## License
 

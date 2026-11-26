@@ -8,12 +8,12 @@ EDGEguide lets Claude Code show a modder how the EDGE tools work, in the editor 
 
 ## Roadmap status
 
-As of 2026-11-25.
+As of 2026-11-26.
 
 | Phase | Status |
 |---|---|
 | G0 Decide | Done 2026-11-25: [the decisions](design.html#g0-decisions) |
-| G1 Skeleton | Not started |
+| G1 Skeleton | Built 2026-11-26, its tests pass; the hand test in the editor has not run ([G1 as built](design.html#g1-as-built)) |
 | G2 Select | Not started |
 | G3 Hints | Not started |
 | G4 Ship | Not started |

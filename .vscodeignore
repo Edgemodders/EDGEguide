@@ -1,0 +1,21 @@
+# What the .vsix leaves out: everything but the bundle in dist/ (with its ThirdPartyNotices.txt),
+# the icon, the README, the CHANGELOG and the LICENSE.
+.github/**
+.vscode/**
+.vscode-test/**
+docs/**
+!docs/assets/brand/icon.png
+src/**
+test/**
+tools/**
+dist-test/**
+dist/**/*.map
+node_modules/**
+esbuild.mjs
+tsconfig.json
+**/*.vsix
+CLAUDE.md
+.gitignore
+.gitattributes
+README.md
+README.marketplace.md

@@ -1,0 +1,76 @@
+{
+  "name": "edgeguide",
+  "displayName": "EDGEguide",
+  "description": "Lets Claude Code show you the EDGE tools for Cyberpunk 2077 modding in your editor: it opens the right view, and runs the tools' own commands while you watch, asking before anything that changes files.",
+  "version": "0.0.1",
+  "publisher": "edgemodders",
+  "license": "MIT",
+  "preview": true,
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Edgemodders/EDGEguide"
+  },
+  "homepage": "https://edgemodders.github.io/EDGEguide/",
+  "bugs": {
+    "url": "https://github.com/Edgemodders/EDGEguide/issues"
+  },
+  "icon": "docs/assets/brand/icon.png",
+  "galleryBanner": {
+    "color": "#08090d",
+    "theme": "dark"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "cyberpunk 2077",
+    "game modding",
+    "mcp",
+    "claude code"
+  ],
+  "engines": {
+    "vscode": "^1.90.0",
+    "node": ">=20"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "edgeguide.status",
+        "title": "Show Status",
+        "category": "EDGEguide"
+      },
+      {
+        "command": "edgeguide.signOut",
+        "title": "Sign Out an Assistant...",
+        "category": "EDGEguide"
+      },
+      {
+        "command": "edgeguide.showLog",
+        "title": "Show Log",
+        "category": "EDGEguide"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node esbuild.mjs --tests && node --test \"dist-test/*.test.cjs\"",
+    "vscode:prepublish": "node esbuild.mjs --production",
+    "package": "vsce package --no-dependencies --readme-path README.marketplace.md"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "@types/node": "^24.0.0",
+    "@types/vscode": "1.90.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "typescript": "~5.9.3",
+    "zod": "^4.6.7"
+  }
+}

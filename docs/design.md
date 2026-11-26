@@ -4,7 +4,7 @@ title: Design
 
 # EDGEguide design
 
-**Status: draft 0.2, G0 decided by the owner on 2026-11-25 ([G0 decisions](#g0-decisions)); next G1, the skeleton. Nothing is built.** Created on 2026-10-26 from the EDGEkit session, after EDGEchat asked for it in [EDGEkit#6](https://github.com/Edgemodders/EDGEkit/issues/6) and the user decided it is an extension of its own, named EDGEguide.
+**Status: draft 0.3. G0 decided by the owner on 2026-11-25 ([G0 decisions](#g0-decisions)); G1, the skeleton, built on 2026-11-26 ([G1 as built](#g1-as-built)), its hand test not run. No release.** Created on 2026-10-26 from the EDGEkit session, after EDGEchat asked for it in [EDGEkit#6](https://github.com/Edgemodders/EDGEkit/issues/6) and the user decided it is an extension of its own, named EDGEguide.
 
 ## What EDGEguide is
 
@@ -77,7 +77,7 @@ Phases are G0 to G4, so they do not clash with the other repos' phases.
 | Phase | Builds | The test proves |
 |---|---|---|
 | **G0 Decide** | The questions below answered (done 2026-11-25) | - |
-| **G1 Skeleton** | The extension, the MCP server and its sign-in, `ui_open`, `ui_run` with the allow-list, `ui_state` from public state | Claude Code, signed in, opens EDGEdeck's Mods view and runs Deploy after asking |
+| **G1 Skeleton** | The extension, the MCP server and its sign-in, `ui_open`, `ui_run` with the allow-list, `ui_state` from public state. Built 2026-11-26 ([G1 as built](#g1-as-built)) | Claude Code, signed in, opens EDGEdeck's Mods view and runs Deploy after asking |
 | **G2 Select** | The contract in the EDGE extensions; `ui_select` and the full `ui_state` | "Show me my mod" selects it in EDGEdeck |
 | **G3 Hints** | `ui_hint`: notifications, webview owners, and EDGEkit's toolbar outline | The Pack and Install walk-through, in EDGEkit and in VS Code |
 | **G4 Ship** | Published on Open VSX and the Marketplace, in the pack, built into EDGEkit; EDGEchat adds the server and `/edge:setup` checks it | A fresh EDGEkit install, with EDGEchat set up, shows the walk-through |
@@ -97,3 +97,27 @@ Proposed on 2026-10-26, with EDGEchat's view from the plugin's side; **decided b
 | `ui_run`'s asking | **`requiresUserInteraction` on every command that changes things**, always. An editor notification may come on top, never instead | The rule REDnode and edgedeck-mcp follow, and the one EDGEchat's safety text relies on |
 | The contract | **The `package.json` key above**, not each extension registering itself through an API | EDGEguide can read every installed extension's `package.json` without starting it; registering through an API needs each extension already running. The EDGE extensions' sessions still shape the key's fields in G2 |
 | Where hints draw in EDGEkit | **A command in EDGEkit's app, `edgekit.pointAt`**, which EDGEguide calls when it exists, and a notification otherwise | EDGEkit's side: asked of EDGEkit in G3 |
+
+## G1 as built
+
+Built on 2026-11-26 in the EDGEkit session (the owner asked to start building), version 0.0.1, not published. 11 tests pass (`npm test`): the Host and Origin guards, the whole OAuth sign-in as Claude Code does it (register, authorize, the modder's answer, token, refresh used once, denial, sign-out), the three tools through the MCP SDK's own client, and a second window taking the port over when the first closes. The hand test in the editor (the G1 row above) has not run.
+
+| Part | File | As built |
+|---|---|---|
+| The server | `src/server.ts` | Streamable HTTP on `127.0.0.1:41822/mcp`, stateless, as REDnode's. Every request's `Host` must name it and a browser's `Origin` must be it. The first window to start listens; the others try again every 10 s and take over when it closes |
+| The sign-in | `src/oauth.ts` | REDnode's `oauth.js` (0.40.1) ported, with a modal editor notification: "*client* asks to use EDGEguide ... Allow only if your browser shows the code *ABC-1234*", Allow or Deny. Kept hashed in `%APPDATA%\Edgemodders\EDGEguide\sign-ins.json`, one file for every editor on the PC, so a sign-in made with EDGEkit's window works when VS Code's answers |
+| The tools | `src/tools.ts` | `ui_state`, `ui_open`, `ui_run`, with instructions for the assistant |
+| The contract | `src/contract.ts` | Read from every installed extension's `package.json` (the `edgeguide` key), else EDGEguide's starting contract for EDGEdeck, REDcode and EDGEwave (`Defaults`) |
+| The editor side | `src/extension.ts` | Views through `<view>.focus`, files through `vscode.open` or at a line, commands through `executeCommand` with no argument (answering after 20 s if the command still runs, such as one waiting for the modder's input). A status bar item, **EDGEguide: Show Status**, **Sign Out an Assistant...** and **Show Log** |
+
+Settled while building:
+
+| Question | As built | Why |
+|---|---|---|
+| Asking for each command that changes things | **`ui_run` asks for every command**; commands with `changes: false` go through `ui_open`, which does not ask | `requiresUserInteraction` is a tool's `_meta`, the same for every call, so one tool cannot ask for some commands and not others. Two tools keep the rule: nothing that changes things runs without asking |
+| An extension listing commands that are not its own | **Dropped.** A contract keeps only the views and commands its extension contributes in its own `package.json`; `ui_state` names what was dropped | Any installed extension can write an `edgeguide` key, so without this one could put a VS Code command such as the terminal's on the allow-list |
+| A command entry with no `changes` | **Counts as a change** | A mistake then asks rather than not |
+| The EDGE extensions before G2 | **A starting contract inside EDGEguide**, replaced whole by an extension's own key | G1's test needs EDGEdeck's Deploy on the allow-list, and EDGEguide does not change the other repos. Only commands that work with no argument: a tree item's commands take the item, so they wait for G2's `reveal` |
+| Which window answers | **The window that listens, for now.** Calls going to the focused window, through a local channel from the other windows ([G0 decisions](#g0-decisions)), are still to build, before G4 | One window is enough for G1's test |
+
+The G1 hand test: install `edgeguide-0.0.1.vsix` (`npm run package`) in EDGEkit or VS Code; `claude mcp add --transport http --scope user edgeguide http://127.0.0.1:41822/mcp`; in Claude Code, `/mcp`, **edgeguide**, **Authenticate**, compare the codes and **Allow**; ask Claude to show EDGEdeck's mods, then to deploy: Claude Code asks before `ui_run`, and EDGEdeck deploys.
