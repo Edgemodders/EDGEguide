@@ -4,7 +4,7 @@ title: Design
 
 # EDGEguide design
 
-**Status: draft 0.3. G0 decided by the owner on 2026-11-25 ([G0 decisions](#g0-decisions)); G1, the skeleton, built on 2026-11-26 ([G1 as built](#g1-as-built)), its hand test not run. No release.** Created on 2026-10-26 from the EDGEkit session, after EDGEchat asked for it in [EDGEkit#6](https://github.com/Edgemodders/EDGEkit/issues/6) and the user decided it is an extension of its own, named EDGEguide.
+**Status: draft 0.3. G0 decided by the owner on 2026-11-25 ([G0 decisions](#g0-decisions)); G1, the skeleton, built on 2026-11-26 ([G1 as built](#g1-as-built)), its hand test partly run on 2026-11-27 (a Deploy that completes is left). No release.** Created on 2026-10-26 from the EDGEkit session, after EDGEchat asked for it in [EDGEkit#6](https://github.com/Edgemodders/EDGEkit/issues/6) and the user decided it is an extension of its own, named EDGEguide.
 
 ## What EDGEguide is
 
@@ -100,7 +100,7 @@ Proposed on 2026-10-26, with EDGEchat's view from the plugin's side; **decided b
 
 ## G1 as built
 
-Built on 2026-11-26 in the EDGEkit session (the owner asked to start building), version 0.0.1, not published. 11 tests pass (`npm test`): the Host and Origin guards, the whole OAuth sign-in as Claude Code does it (register, authorize, the modder's answer, token, refresh used once, denial, sign-out), the three tools through the MCP SDK's own client, and a second window taking the port over when the first closes. The hand test in the editor (the G1 row above) has not run.
+Built on 2026-11-26 in the EDGEkit session (the owner asked to start building), version 0.0.1, not published. 11 tests pass (`npm test`): the Host and Origin guards, the whole OAuth sign-in as Claude Code does it (register, authorize, the modder's answer, token, refresh used once, denial, sign-out), the three tools through the MCP SDK's own client, and a second window taking the port over when the first closes. The hand test in the editor (the G1 row above) ran on 2026-11-27, all but a completed Deploy (below).
 
 | Part | File | As built |
 |---|---|---|
@@ -121,3 +121,15 @@ Settled while building:
 | Which window answers | **The window that listens, for now.** Calls going to the focused window, through a local channel from the other windows ([G0 decisions](#g0-decisions)), are still to build, before G4 | One window is enough for G1's test |
 
 The G1 hand test: install `edgeguide-0.0.1.vsix` (`npm run package`) in EDGEkit or VS Code; `claude mcp add --transport http --scope user edgeguide http://127.0.0.1:41822/mcp`; in Claude Code, `/mcp`, **edgeguide**, **Authenticate**, compare the codes and **Allow**; ask Claude to show EDGEdeck's mods, then to deploy: Claude Code asks before `ui_run`, and EDGEdeck deploys.
+
+**Run on 2026-11-27, partly** (by script in EDGEweb's session, at the owner's go; EDGEkit 1.143.2 on a scratch profile, EDGEdeck 0.34.2 with a scratch library and a fake game folder, Claude Code 2.1.332, `--scope local`):
+
+| Step | Seen |
+|---|---|
+| The status bar | "EDGEguide" with the compass; "this window answers" |
+| Sign-in | `/mcp` needed sign-in; the browser and the editor's modal showed the same code; Allow; "Signed in and connected to edgeguide" |
+| Show EDGEdeck's mods | `ui_state`, then `ui_open` with `edgedeck.mods`: the Mods view opened. Claude Code asked before both, because it ran in its manual permission mode, which asks before an MCP tool's first call whatever the tool says. EDGEguide asks for neither. Not tried in auto mode |
+| Deploy | Claude Code asked before `ui_run` (`edgedeck.deploy`), with only Yes and No. No: nothing ran. Yes: EDGEdeck's Deploy started and stopped at its own question, because the game was running ("Quit the game first"); Cancel. After 20 s Claude said the deploy had not finished and might be waiting on the modder, as built |
+| Sign-out | **Sign Out an Assistant...** listed Claude Code and signed it out. Its registration stays in `sign-ins.json` with no tokens, as built (it signs in with the same id again), and the list no longer shows it |
+
+Left: one Deploy that completes, with the game closed. Found: Claude Code with EDGEchat also has the `edgedeck` server's `edgedeck_deploy`, so a plain "deploy" may go there rather than through `ui_run`; the test named EDGEguide in each ask. Which one Claude picks (EDGEguide when the modder wants to watch it in the editor) is for G2, with EDGEchat.
