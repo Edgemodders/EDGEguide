@@ -4,7 +4,7 @@ title: Design
 
 # EDGEguide design
 
-**Status: draft 0.3. G0 decided by the owner on 2026-11-25 ([G0 decisions](#g0-decisions)); G1, the skeleton, built on 2026-11-26 ([G1 as built](#g1-as-built)), its hand test partly run on 2026-11-27 (a Deploy that completes is left). No release.** Created on 2026-10-26 from the EDGEkit session, after EDGEchat asked for it in [EDGEkit#6](https://github.com/Edgemodders/EDGEkit/issues/6) and the user decided it is an extension of its own, named EDGEguide.
+**Status: draft 0.3. G0 decided by the owner on 2026-11-25 ([G0 decisions](#g0-decisions)); G1, the skeleton, built on 2026-11-26 ([G1 as built](#g1-as-built)), its hand test partly run on 2026-11-27 (a Deploy that completes is left); on the owner's laptop on 2026-11-28 it opened views and answered a plain question unprompted. Tours (`ui_tour`, 0.0.2), the first part of G3, built on 2026-11-28 at the owner's ask ([Tours](#tours)), not yet tried in the editor. No release.** Created on 2026-10-26 from the EDGEkit session, after EDGEchat asked for it in [EDGEkit#6](https://github.com/Edgemodders/EDGEkit/issues/6) and the user decided it is an extension of its own, named EDGEguide.
 
 ## What EDGEguide is
 
@@ -39,7 +39,8 @@ Today Claude does the work through the EDGE MCP servers (`redcode`, `edgedeck`, 
 |---|---|---|
 | `ui_open` | Opens a view or page: EDGEdeck's Mods view or page, REDcode's Project view, Game Assets filtered to a path, the TweakDB view on a record, EDGEmat's Find on an item, a file | No |
 | `ui_select` | Reveals and selects an item in a view: a mod, a project file, an asset, a record | No |
-| `ui_hint` | Shows a short note at a button or menu item, such as "This is **Deploy**: it puts your changes into the game" | No |
+| `ui_tour` | A short tour, one step at a time with Back, Next and Close: each step a note of a sentence or two, with its view, file at a line, or command that changes nothing, and the button it is about. Never runs a command that changes things; the modder presses the button. Built 2026-11-28 ([Tours](#tours)) | No |
+| `ui_hint` | Shows a short note at a button or menu item, such as "This is **Deploy**: it puts your changes into the game". Since 2026-11-28 a tour step's `button`; drawn beside the button in EDGEkit (still to build), named with its place elsewhere | No |
 | `ui_run` | Runs one of the EDGE extensions' own commands, from their allow-lists | Yes, for every command that changes files or the game folder: `_meta["anthropic/requiresUserInteraction"]: true`, as REDnode and edgedeck-mcp do |
 | `ui_state` | What is open and selected, so Claude knows where the modder is | No |
 
@@ -79,7 +80,7 @@ Phases are G0 to G4, so they do not clash with the other repos' phases.
 | **G0 Decide** | The questions below answered (done 2026-11-25) | - |
 | **G1 Skeleton** | The extension, the MCP server and its sign-in, `ui_open`, `ui_run` with the allow-list, `ui_state` from public state. Built 2026-11-26 ([G1 as built](#g1-as-built)) | Claude Code, signed in, opens EDGEdeck's Mods view and runs Deploy after asking |
 | **G2 Select** | The contract in the EDGE extensions; `ui_select` and the full `ui_state` | "Show me my mod" selects it in EDGEdeck |
-| **G3 Hints** | `ui_hint`: notifications, webview owners, and EDGEkit's toolbar outline | The Pack and Install walk-through, in EDGEkit and in VS Code |
+| **G3 Hints** | `ui_hint`: notifications, webview owners, and EDGEkit's toolbar outline. Started on 2026-11-28 ahead of G2, at the owner's ask: `ui_tour` with the Steps panel is built ([Tours](#tours)); EDGEkit's callout and the webview owners are left | The Pack and Install walk-through, in EDGEkit and in VS Code |
 | **G4 Ship** | Published on Open VSX and the Marketplace, in the pack, built into EDGEkit; EDGEchat adds the server and `/edge:setup` checks it | A fresh EDGEkit install, with EDGEchat set up, shows the walk-through |
 
 ## G0 decisions
@@ -96,7 +97,7 @@ Proposed on 2026-10-26, with EDGEchat's view from the plugin's side; **decided b
 | No editor window open | No extension host runs, so nothing listens: the connection is refused. `/edge:setup` reports that as "no editor open", not as a failure | The server cannot answer when no window runs it; EDGEchat asked for a plain answer |
 | `ui_run`'s asking | **`requiresUserInteraction` on every command that changes things**, always. An editor notification may come on top, never instead | The rule REDnode and edgedeck-mcp follow, and the one EDGEchat's safety text relies on |
 | The contract | **The `package.json` key above**, not each extension registering itself through an API | EDGEguide can read every installed extension's `package.json` without starting it; registering through an API needs each extension already running. The EDGE extensions' sessions still shape the key's fields in G2 |
-| Where hints draw in EDGEkit | **A command in EDGEkit's app, `edgekit.pointAt`**, which EDGEguide calls when it exists, and a notification otherwise | EDGEkit's side: asked of EDGEkit in G3 |
+| Where hints draw in EDGEkit | **A command in EDGEkit's app, `edgekit.pointAt`**, which EDGEguide calls when it exists, and a notification otherwise. Changed 2026-11-28: EDGEguide's Steps panel otherwise, since an extension's notification hides after 10 s ([Tours](#tours)) | EDGEkit's side: asked of EDGEkit in G3 |
 
 ## G1 as built
 
@@ -133,6 +134,24 @@ The G1 hand test: install `edgeguide-0.0.1.vsix` (`npm run package`) in EDGEkit 
 | Sign-out | **Sign Out an Assistant...** listed Claude Code and signed it out. Its registration stays in `sign-ins.json` with no tokens, as built (it signs in with the same id again), and the list no longer shows it |
 
 Left: one Deploy that completes, with the game closed. Found: Claude Code with EDGEchat also has the `edgedeck` server's `edgedeck_deploy`, so a plain "deploy" may go there rather than through `ui_run`; the test named EDGEguide in each ask. Which one Claude picks (EDGEguide when the modder wants to watch it in the editor) is for G2, with EDGEchat.
+
+**On the owner's laptop, 2026-11-28** (0.0.1, by hand): EDGEguide connected and signed in; asked to use EDGEguide, Claude opened EDGEdeck's Mods view and said what was open. Then a plain question that did not name EDGEguide: Claude used it to walk through the steps by itself ("it works", the owner), but its replies were long and added steps of their own, which led to [Tours](#tours). The completed Deploy was not part of it.
+
+## Tours
+
+Built on 2026-11-28 (version 0.0.2, not published), at the owner's ask after the laptop test: Claude answered a plain "how do I" question by opening views, but its replies were long and added steps. The owner wanted a short note near the thing to look at, with a **Next** button that goes to the next step.
+
+| Part | File | As built |
+|---|---|---|
+| The tool | `src/tools.ts` | `ui_tour` takes 1 to 8 steps: `text` (up to 300 characters), at most one of `view`, `file` with `line`, or `command` (one that changes nothing, run when the step shows), and `button` (any listed command: pointed at, never run). It checks every step before showing any, answers at once, and tells Claude to answer in one short line. A new tour replaces the one showing |
+| Where Claude learns of it | `src/tools.ts`, `Instructions` | "When the modder asks how to do something in the EDGE tools, or where something is, show them with ui_tour instead of explaining at length: 2 to 5 steps ... Then answer in one short line ... The modder need not know EDGEguide's name" |
+| The buttons | `src/contract.ts`, `buttonOf` | Each listed command's name and place, read from its extension's `package.json`: the title (not an `%nls%` key), the codicon (`$(rocket)` is "rocket"), and the first menu that has it: "the rocket button at the top of the Mods view", "the ... menu at the top of the Mods view", else "the Command Palette". `ui_state` lists them as `button` and `where`. Checked against EDGEdeck 0.34.4 and EDGEwave 0.3.0 |
+| The Steps panel | `src/tour.ts` | A webview view, **EDGEguide: Steps**, in the bottom panel: "Step 2 of 4", the note, "Look for **Deploy**: the rocket button at the top of the Mods view", and Back, Next (Done on the last) and Close. Each step opens its place after the panel opens, so the place has the focus. Claude's text goes in with `textContent` only, under a strict content security policy. `ui_state`'s `tour` says the step showing, or done or closed |
+| In a file | `src/tour.ts` | The note also shows at the end of its line, in italics, with the line highlighted |
+
+Why a panel, not a toast (read in Code - OSS 1.143.1, 2026-11-28): `notificationsToasts.ts` hides a toast after 10 s (Info; 12 s Warning, 15 s Error) unless the mouse is over it or it is sticky, and `mainThreadMessageService.ts` makes an extension's toast sticky only for `vscode.github-authentication` and `vscode.microsoft-authentication`. A tour step's toast would go, with its Next button, before the modder had done the step.
+
+Left for G3: in EDGEkit, the note drawn beside the button itself (`edgekit.pointAt`, in EDGEkit's workbench: the button found from the step's `menu`, `view` and title; the activity bar icon or the view's header otherwise), with the Steps panel kept for VS Code; inside webviews, through their owners.
 
 ## Releasing
 

@@ -9,12 +9,14 @@ import * as vscode from "vscode";
 import { readContracts } from "./contract";
 import { createOAuth, type OAuth, type PendingRequest } from "./oauth";
 import { createServer, DefaultPort, type GuideServer, type ServerState } from "./server";
-import { buildServer, type Ui } from "./tools";
+import { buildServer, type TourStep, type Ui } from "./tools";
+import { Tour, TourViewId } from "./tour";
 
 /** How long ui_run and ui_open wait for a command before answering that it still runs. */
 const CommandWaitMs = 20 * 1000;
 
 let server: GuideServer | undefined;
+let tour: Tour | undefined;
 
 /** Where the sign-ins are kept: one file for every editor on this PC, EDGEkit and VS Code alike. */
 export function signInFile(): string {
@@ -64,6 +66,7 @@ const ui: Ui = {
           }
         : null,
       tabs,
+      tour: tour?.state() ?? null,
     };
   },
 
@@ -96,13 +99,28 @@ const ui: Ui = {
     if (!first.done) return `started; still running after ${CommandWaitMs / 1000} s (it may be waiting for the modder)`;
     return summarize(first.r);
   },
+
+  async startTour(steps) {
+    if (!tour) throw new Error("The tour panel is not ready yet.");
+    await tour.start(steps);
+  },
 };
+
+/** Opens a tour step's place. A command here changes nothing (ui_tour checked it); it is not waited for. */
+async function showStep(step: TourStep) {
+  if (step.view) await ui.focusView(step.view);
+  else if (step.file) await ui.openFile(step.file, step.line);
+  else if (step.command) void Promise.resolve(vscode.commands.executeCommand(step.command)).catch(() => undefined);
+}
 
 export function activate(context: vscode.ExtensionContext) {
   const log = vscode.window.createOutputChannel("EDGEguide");
   context.subscriptions.push(log);
   const say = (line: string) => log.appendLine(`${new Date().toISOString()} ${line}`);
   const version = String(context.extension.packageJSON.version ?? "0.0.0");
+
+  tour = new Tour(showStep, say);
+  context.subscriptions.push(tour, vscode.window.registerWebviewViewProvider(TourViewId, tour, { webviewOptions: { retainContextWhenHidden: true } }));
 
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 0);
   status.command = "edgeguide.status";
@@ -177,4 +195,5 @@ export function activate(context: vscode.ExtensionContext) {
 export async function deactivate() {
   await server?.stop();
   server = undefined;
+  tour = undefined;
 }

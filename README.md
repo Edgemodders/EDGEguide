@@ -17,7 +17,7 @@ It is an editor extension with a local MCP server that [Claude Code](https://cod
 **[Docs](https://edgemodders.github.io/EDGEguide/)** · [Design](https://edgemodders.github.io/EDGEguide/design.html) · [EDGEkit](https://github.com/Edgemodders/EDGEkit) · [EDGEchat](https://github.com/Edgemodders/EDGEchat)
 
 > [!NOTE]
-> **Status: G1 built (2026-11-26), its hand test partly run (2026-11-27).** There is no release. In the editor, Claude Code signed in, opened EDGEdeck's Mods view and asked before starting Deploy; a Deploy that completes is still to see. The skeleton works in its tests: an MCP server in the editor on `127.0.0.1:41822`, a sign-in you allow in the editor, and three tools (`ui_state`, `ui_open`, and `ui_run`, which asks before every command). Next: that Deploy, then G2, selecting items in the EDGE tools' views. See the [design](https://edgemodders.github.io/EDGEguide/design.html#g1-as-built).
+> **Status: G1 built (2026-11-26), its hand test partly run (2026-11-27).** There is no release. In the editor, Claude Code signed in, opened EDGEdeck's Mods view and asked before starting Deploy; a Deploy that completes is still to see. The skeleton works in its tests: an MCP server in the editor on `127.0.0.1:41822`, a sign-in you allow in the editor, and three tools (`ui_state`, `ui_open`, and `ui_run`, which asks before every command). Tours (0.0.2, 2026-11-28): Claude can show the steps in the editor, one short note at a time with Back, Next and Close, in the Steps panel; not yet tried in the editor. Next: that Deploy, the note drawn beside the button in EDGEkit, then G2, selecting items in the EDGE tools' views. See the [design](https://edgemodders.github.io/EDGEguide/design.html#tours).
 
 ## License
 

@@ -14,15 +14,27 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { readContracts, type InstalledExtension } from "../src/contract";
 import { createOAuth, type OAuth } from "../src/oauth";
 import { createServer, type GuideServer } from "../src/server";
-import { buildServer, type Ui } from "../src/tools";
+import { buildServer, type TourStep, type Ui } from "../src/tools";
 
 const deck: InstalledExtension = {
   id: "edgemodders.edgedeck",
   packageJSON: {
     version: "0.34.2",
     contributes: {
-      views: { edgedeck: [{ id: "edgedeck.mods" }] },
-      commands: [{ command: "edgedeck.deploy" }, { command: "edgedeck.openPage" }, { command: "edgedeck.undo" }],
+      views: { edgedeck: [{ id: "edgedeck.mods", name: "Mods" }] },
+      commands: [
+        { command: "edgedeck.deploy", title: "Deploy", icon: "$(rocket)" },
+        { command: "edgedeck.openPage", title: "%openPage.title%" },
+        { command: "edgedeck.undo" },
+        { command: "edgedeck.checkConflicts", title: "Show conflicts", icon: "$(warning)" },
+      ],
+      // As EDGEdeck 0.34.4 has them.
+      menus: {
+        "view/title": [
+          { command: "edgedeck.deploy", when: "view == edgedeck.mods", group: "navigation@2" },
+          { command: "edgedeck.checkConflicts", when: "view == edgedeck.mods", group: "1_more@0" },
+        ],
+      },
     },
   },
 };
@@ -51,12 +63,14 @@ describe("EDGEguide's server", () => {
   let answer = true;
   const ran: string[] = [];
   const shown: string[] = [];
+  const tours: TourStep[][] = [];
   const ui: Ui = {
     contracts: () => readContracts([deck]),
     state: async () => ({ editor: { app: "Test", focused: true }, tabs: [] }),
     focusView: async (v) => void shown.push(v),
     openFile: async (f) => void shown.push(f),
     run: async (c) => void ran.push(c),
+    startTour: async (steps) => void tours.push(steps),
   };
 
   before(async () => {
@@ -139,7 +153,8 @@ describe("EDGEguide's server", () => {
     const client = new Client({ name: "test", version: "0" });
     await client.connect(new StreamableHTTPClientTransport(new URL(`${base}/mcp`), { requestInit: { headers: { authorization: `Bearer ${refreshed.access_token}` } } }));
     const { tools } = await client.listTools();
-    assert.deepEqual(tools.map((t) => t.name).sort(), ["ui_open", "ui_run", "ui_state"]);
+    assert.deepEqual(tools.map((t) => t.name).sort(), ["ui_open", "ui_run", "ui_state", "ui_tour"]);
+    assert.ok(!tools.find((t) => t.name === "ui_tour")!._meta, "ui_tour does not ask");
     const run = tools.find((t) => t.name === "ui_run")!;
     assert.equal((run._meta as Record<string, unknown>)["anthropic/requiresUserInteraction"], true, "ui_run asks first");
     assert.ok(!tools.find((t) => t.name === "ui_open")!._meta, "ui_open does not ask");
@@ -149,6 +164,45 @@ describe("EDGEguide's server", () => {
     assert.equal(parsed.extensions[0].id, "edgemodders.edgedeck");
     assert.deepEqual(parsed.extensions[0].views, ["edgedeck.mods"]);
     assert.ok(parsed.extensions[0].dropped.length > 0, "the default's commands EDGEdeck does not contribute here are listed as dropped");
+    const commands = parsed.extensions[0].commands;
+    assert.equal(commands["edgedeck.deploy"].button, "Deploy", "the title from package.json");
+    assert.equal(commands["edgedeck.openPage"].button, "Opens EDGEdeck's page", "an nls key is not a name: the hint's part before the colon");
+    assert.equal(commands["edgedeck.undo"].button, "Undo deploy", "no title: the hint's part before the colon");
+    assert.equal(commands["edgedeck.checkConflicts"].where, "the ... menu at the top of the Mods view");
+    assert.equal(commands["edgedeck.undo"].where, "the Command Palette (Ctrl+Shift+P)", "in no menu");
+
+    const bad = async (steps: unknown[]) => (await client.callTool({ name: "ui_tour", arguments: { steps } })).isError;
+    assert.equal(await bad([]), true, "a tour has a step");
+    assert.equal(await bad([{ text: "x", view: "workbench.view.scm" }]), true, "only listed views");
+    assert.equal(await bad([{ text: "x", command: "edgedeck.deploy" }]), true, "a tour runs nothing that changes things");
+    assert.equal(await bad([{ text: "x", button: "workbench.action.terminal.new" }]), true, "only listed buttons");
+    assert.equal(await bad([{ text: "x", view: "edgedeck.mods", command: "edgedeck.checkConflicts" }]), true, "one place per step");
+    assert.equal(await bad([{ text: "x", file: "relative.txt" }]), true, "an absolute path");
+    assert.equal(await bad([{ text: "x", line: 3 }]), true, "line goes with file");
+    assert.equal(tours.length, 0, "no tour started by a bad call");
+    const ok = await client.callTool({
+      name: "ui_tour",
+      arguments: {
+        steps: [
+          { text: " These are your mods. ", view: "edgedeck.mods" },
+          { text: "This lists clashes.", command: "edgedeck.checkConflicts" },
+          { text: "Press Deploy to put them into the game.", button: "edgedeck.deploy" },
+        ],
+      },
+    });
+    assert.ok(!ok.isError);
+    assert.match((ok.content as { text: string }[])[0].text, /step 1 of 3/);
+    assert.deepEqual(tours, [
+      [
+        { text: "These are your mods.", view: "edgedeck.mods" },
+        { text: "This lists clashes.", command: "edgedeck.checkConflicts" },
+        {
+          text: "Press Deploy to put them into the game.",
+          button: { command: "edgedeck.deploy", title: "Deploy", place: "the rocket button at the top of the Mods view", menu: "view/title", view: "edgedeck.mods" },
+        },
+      ],
+    ]);
+    assert.deepEqual(ran, [], "the tour ran nothing on its own");
 
     await client.callTool({ name: "ui_open", arguments: { view: "edgedeck.mods" } });
     assert.deepEqual(shown, ["edgedeck.mods"]);

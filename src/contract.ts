@@ -27,6 +27,24 @@ export interface ExtensionContract extends Contract {
   source: "own" | "EDGEguide's default";
   /** What was left out and why: a view or command the extension does not contribute. */
   dropped: string[];
+  /** Each listed command's button: its name, and where the modder finds it, from the extension's menus. */
+  buttons: Record<string, Button>;
+}
+
+export interface Button {
+  /** The command's title, as the modder sees it. */
+  title: string;
+  /** Where it is, in words: "the rocket button at the top of the Mods view". */
+  place: string;
+  /** Where it is, for code: the menu and the view, from the extension's package.json. */
+  menu?: string;
+  view?: string;
+}
+
+interface MenuItem {
+  command?: string;
+  group?: string;
+  when?: string;
 }
 
 /** What EDGEguide needs from an installed extension: vscode.Extension's id and packageJSON. */
@@ -35,7 +53,11 @@ export interface InstalledExtension {
   packageJSON: {
     version?: string;
     edgeguide?: unknown;
-    contributes?: { views?: Record<string, { id: string }[]>; commands?: { command: string }[] | { command: string } };
+    contributes?: {
+      views?: Record<string, { id: string; name?: unknown }[]>;
+      commands?: { command: string; title?: unknown; icon?: unknown }[] | { command: string; title?: unknown; icon?: unknown };
+      menus?: Record<string, MenuItem[]>;
+    };
   };
 }
 
@@ -82,12 +104,62 @@ export const Defaults: Record<string, Contract> = {
   },
 };
 
+/** A string from package.json that is a name: a title such as "%deploy.title%" is a key into package.nls.json. */
+const plain = (x: unknown): string | undefined => (typeof x === "string" && x && !x.startsWith("%") ? x : undefined);
+
 function contributed(ext: InstalledExtension) {
   const c = ext.packageJSON.contributes ?? {};
-  const views = new Set(Object.values(c.views ?? {}).flat().map((v) => v.id));
+  const viewList = Object.values(c.views ?? {}).flat();
+  const views = new Set(viewList.map((v) => v.id));
+  const viewNames = new Map(viewList.map((v) => [v.id, plain(v.name)]));
   const list = Array.isArray(c.commands) ? c.commands : c.commands ? [c.commands] : [];
   const commands = new Set(list.map((x) => x.command));
-  return { views, commands };
+  const titles = new Map(list.flatMap((x) => (plain(x.title) ? [[x.command, plain(x.title)!] as const] : [])));
+  // "$(rocket)" is the rocket icon; a path to an image says nothing in words.
+  const icons = new Map(list.flatMap((x) => (typeof x.icon === "string" && /^\$\([\w-]+\)$/.test(x.icon) ? [[x.command, x.icon.slice(2, -1).replace(/-/g, " ")] as const] : [])));
+  return { views, viewNames, commands, titles, icons, menus: c.menus ?? {} };
+}
+
+type Contributed = ReturnType<typeof contributed>;
+
+/** The view a menu item's when clause names ("view == edgedeck.mods"), if any. */
+const viewIn = (when: string | undefined) => /\bview\s*==\s*'?([\w.-]+)'?/.exec(when ?? "")?.[1];
+
+/** Menus in the order a modder most likely meets them; the first that has the command says where it is. */
+const MenuOrder = ["view/title", "view/item/context", "editor/title", "editor/context", "explorer/context", "commandPalette"];
+
+/** The command's button: its name and where it is, from the extension's menus. */
+function buttonOf(id: string, rule: CommandRule, c: Contributed): Button {
+  const head = rule.hint?.split(":")[0];
+  const title = c.titles.get(id) ?? (head && head !== rule.hint ? head : id.slice(id.lastIndexOf(".") + 1));
+  const icon = c.icons.get(id);
+  for (const menu of MenuOrder) {
+    const item = (c.menus[menu] ?? []).find((i) => i.command === id && !(menu === "commandPalette" && i.when === "false"));
+    if (!item) continue;
+    const view = viewIn(item.when);
+    const viewName = view ? `the ${c.viewNames.get(view) ?? view} view` : "the view";
+    // "navigation@2" is the group navigation, second: a button on the bar, as "inline" is beside an item.
+    const group = item.group?.split("@")[0];
+    const inline = group === "navigation" || group === "inline";
+    const place =
+      menu === "view/title"
+        ? inline
+          ? `the ${icon ? `${icon} ` : ""}button at the top of ${viewName}`
+          : `the ... menu at the top of ${viewName}`
+        : menu === "view/item/context"
+          ? inline
+            ? `the ${icon ? `${icon} ` : ""}button beside an item in ${viewName}, when the mouse is over it`
+            : `the menu when you right-click an item in ${viewName}`
+          : menu === "editor/title"
+            ? `the ${icon ? `${icon} ` : ""}button at the top right of the editor`
+            : menu === "editor/context"
+              ? "the menu when you right-click in the editor"
+              : menu === "explorer/context"
+                ? "the menu when you right-click a file in the Explorer"
+                : "the Command Palette (Ctrl+Shift+P)";
+    return { title, place, menu, ...(view ? { view } : {}) };
+  }
+  return { title, place: "the Command Palette (Ctrl+Shift+P)" };
 }
 
 /** The extension's own "edgeguide" key, checked, or undefined when it has none or it is not usable. */
@@ -118,13 +190,17 @@ export function readContracts(extensions: readonly InstalledExtension[]): Extens
     const mine = own(ext.packageJSON.edgeguide);
     const base = mine ?? Defaults[ext.id];
     if (!base) continue;
-    const { views, commands } = contributed(ext);
+    const c = contributed(ext);
+    const { views, commands } = c;
     const dropped: string[] = [];
     const keepViews = base.views.filter((v) => views.has(v) || (dropped.push(`view ${v}: not contributed`), false));
     const keepCommands: Record<string, CommandRule> = {};
+    const buttons: Record<string, Button> = {};
     for (const [id, rule] of Object.entries(base.commands)) {
-      if (commands.has(id)) keepCommands[id] = rule;
-      else dropped.push(`command ${id}: not contributed`);
+      if (commands.has(id)) {
+        keepCommands[id] = rule;
+        buttons[id] = buttonOf(id, rule, c);
+      } else dropped.push(`command ${id}: not contributed`);
     }
     const keepCommand = (id: string | undefined) => {
       if (!id) return undefined;
@@ -143,6 +219,7 @@ export function readContracts(extensions: readonly InstalledExtension[]): Extens
       ...(reveal ? { reveal } : {}),
       ...(state ? { state } : {}),
       dropped,
+      buttons,
     });
   }
   return out;
