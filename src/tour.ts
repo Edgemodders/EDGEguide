@@ -78,9 +78,19 @@ export class Tour implements vscode.WebviewViewProvider {
   }
 
   /** A past tour again, from its Replay button: the list keeps its order. */
-  private async replay(i: number) {
-    const past = this.history()[i];
+  private async replay(when: string) {
+    const past = this.history().find((t) => t.when === when);
     if (past) await this.run(past.steps, past.title);
+  }
+
+  /** A past tour off the list, from its Delete button. Found by when it was shown, so a list another window changed meanwhile cannot lose the wrong one. */
+  private async remove(when: string) {
+    const past = this.history();
+    const left = past.filter((t) => t.when !== when);
+    if (left.length === past.length) return;
+    await this.store.update(HistoryKey, left);
+    this.say(`tour deleted from the list (${left.length} left)`);
+    this.post();
   }
 
   private async run(steps: TourStep[], title: string) {
@@ -134,7 +144,7 @@ export class Tour implements vscode.WebviewViewProvider {
       type: "step",
       status: this.status ?? "none",
       title: this.title,
-      past: this.history().map((t) => ({ title: t.title, steps: t.steps.length })),
+      past: this.history().map((t) => ({ title: t.title, steps: t.steps.length, when: t.when })),
       at: this.at + 1,
       of: this.steps.length,
       text: step?.text ?? "",
@@ -148,9 +158,10 @@ export class Tour implements vscode.WebviewViewProvider {
     this.view = view;
     view.webview.options = { enableScripts: true, localResourceRoots: [] };
     view.webview.html = page(view.webview.cspSource);
-    view.webview.onDidReceiveMessage((m: { type?: string; index?: unknown }) => {
+    view.webview.onDidReceiveMessage((m: { type?: string; when?: unknown }) => {
       if (m.type === "ready") this.post();
-      else if (m.type === "replay" && typeof m.index === "number") void this.replay(m.index);
+      else if (m.type === "replay" && typeof m.when === "string") void this.replay(m.when);
+      else if (m.type === "delete" && typeof m.when === "string") void this.remove(m.when);
       else if (m.type === "next") void this.go(this.at + 1);
       else if (m.type === "back") void this.go(this.at - 1);
       else if (m.type === "close") this.end("closed");
@@ -191,7 +202,7 @@ function page(cspSource: string): string {
   #past li { margin: 3px 0; }
   #past li span { margin-right: 10px; }
   #past li small { opacity: 0.7; margin-right: 10px; }
-  #past button { padding: 1px 10px; font-size: 0.9em; }
+  #past button { padding: 1px 10px; font-size: 0.9em; margin-right: 6px; }
 </style>
 </head>
 <body>
@@ -219,26 +230,30 @@ function page(cspSource: string): string {
   const $ = (id) => document.getElementById(id);
   for (const id of ["back", "next", "close"]) $(id).addEventListener("click", () => vscode.postMessage({ type: id }));
   $("list").addEventListener("click", (e) => {
-    const b = e.target.closest("button[data-index]");
-    if (b) vscode.postMessage({ type: "replay", index: Number(b.dataset.index) });
+    const b = e.target.closest("button[data-act]");
+    if (b) vscode.postMessage({ type: b.dataset.act, when: b.dataset.when });
   });
+  function button(label, act, when, tip) {
+    const b = document.createElement("button");
+    b.className = "secondary";
+    b.textContent = label;
+    b.dataset.act = act;
+    b.dataset.when = when;
+    b.title = tip;
+    return b;
+  }
   function showPast(past) {
     const list = $("list");
     list.replaceChildren();
-    past.forEach((t, i) => {
+    for (const t of past) {
       const li = document.createElement("li");
       const name = document.createElement("span");
       name.textContent = t.title;
       const n = document.createElement("small");
       n.textContent = t.steps === 1 ? "1 step" : t.steps + " steps";
-      const b = document.createElement("button");
-      b.className = "secondary";
-      b.textContent = "Replay";
-      b.dataset.index = String(i);
-      b.title = "Show this tour again";
-      li.append(name, n, b);
+      li.append(name, n, button("Replay", "replay", t.when, "Show this tour again"), button("Delete", "delete", t.when, "Take this tour off the list"));
       list.append(li);
-    });
+    }
     $("past").hidden = past.length === 0;
   }
   window.addEventListener("message", (e) => {
