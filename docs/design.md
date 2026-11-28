@@ -133,3 +133,14 @@ The G1 hand test: install `edgeguide-0.0.1.vsix` (`npm run package`) in EDGEkit 
 | Sign-out | **Sign Out an Assistant...** listed Claude Code and signed it out. Its registration stays in `sign-ins.json` with no tokens, as built (it signs in with the same id again), and the list no longer shows it |
 
 Left: one Deploy that completes, with the game closed. Found: Claude Code with EDGEchat also has the `edgedeck` server's `edgedeck_deploy`, so a plain "deploy" may go there rather than through `ui_run`; the test named EDGEguide in each ask. Which one Claude picks (EDGEguide when the modder wants to watch it in the editor) is for G2, with EDGEchat.
+
+## Releasing
+
+There is no release yet. When there is, these steps go with it:
+
+| Step | What |
+|---|---|
+| Changelog | `CHANGELOG.md`, a section per release headed `## <version> (<YYYY-MM-DD>)` under `## Unreleased`, with a `<!-- nexus` summary if it goes to Nexus Mods (the Edgemodders conventions, as in EDGEkit) |
+| README | The status line names the version and date |
+| Wiki | Right after the release, in the same piece of work, the session that released brings EDGEweb's pages about EDGEguide up to that version (the Edgemodders convention, [EDGEguide#1](https://github.com/Edgemodders/EDGEguide/issues/1)): a section `docs/wiki/edgeguide/` once there is one, EDGEguide's rows on the shared wiki pages, and the pages that mention it (`grep -rln EDGEguide docs` in `../EDGEweb`). The changelog section is the list of what changed. Set each changed page's `reviewed` date, follow EDGEweb's `CLAUDE.md` (Wiki), pull first, commit and push to `main` as `CyberbuildsAI`. Never before the release: the wiki describes what modders can install |
+| Dashboard | EDGEguide's entry in EDGEweb's `status.js` (this repo's `CLAUDE.md`, Dashboard) |
