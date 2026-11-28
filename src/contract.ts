@@ -134,13 +134,15 @@ function buttonOf(id: string, rule: CommandRule, c: Contributed): Button {
   const title = c.titles.get(id) ?? (head && head !== rule.hint ? head : id.slice(id.lastIndexOf(".") + 1));
   const icon = c.icons.get(id);
   for (const menu of MenuOrder) {
-    const item = (c.menus[menu] ?? []).find((i) => i.command === id && !(menu === "commandPalette" && i.when === "false"));
+    // "navigation@2" is the group navigation, second: a button on the bar, as "inline" is beside an item.
+    const isInline = (i: MenuItem) => ["navigation", "inline"].includes(i.group?.split("@")[0] ?? "");
+    const items = (c.menus[menu] ?? []).filter((i) => i.command === id && !(menu === "commandPalette" && i.when === "false"));
+    // A command both on the bar and in the ... menu is pointed at on the bar, where it shows.
+    const item = items.find(isInline) ?? items[0];
     if (!item) continue;
     const view = viewIn(item.when);
     const viewName = view ? `the ${c.viewNames.get(view) ?? view} view` : "the view";
-    // "navigation@2" is the group navigation, second: a button on the bar, as "inline" is beside an item.
-    const group = item.group?.split("@")[0];
-    const inline = group === "navigation" || group === "inline";
+    const inline = isInline(item);
     const place =
       menu === "view/title"
         ? inline
@@ -202,6 +204,18 @@ export function readContracts(extensions: readonly InstalledExtension[]): Extens
         buttons[id] = buttonOf(id, rule, c);
       } else dropped.push(`command ${id}: not contributed`);
     }
+    // Before an extension has its own key: every command in its views' title bars and ... menus, so a
+    // tour can point at any of them. One the default does not describe counts as a change, so it asks.
+    // A title bar's command takes no argument, unlike an item's.
+    if (!mine) {
+      for (const item of c.menus["view/title"] ?? []) {
+        const id = item.command;
+        const view = viewIn(item.when);
+        if (!id || keepCommands[id] || !commands.has(id) || !view || !keepViews.includes(view)) continue;
+        keepCommands[id] = { changes: true };
+        buttons[id] = buttonOf(id, keepCommands[id], c);
+      }
+    }
     const keepCommand = (id: string | undefined) => {
       if (!id) return undefined;
       if (commands.has(id)) return id;
@@ -232,6 +246,15 @@ export function findCommand(contracts: readonly ExtensionContract[], id: string)
     if (rule) return { contract, rule };
   }
   return undefined;
+}
+
+/**
+ * Whether pressing a tour step's button in the panel asks the modder first: yes when it may change
+ * things, unless its title ends in "..." (the convention for a command that asks for more, such as a
+ * name, before it does anything; Escape cancels it there).
+ */
+export function pressAsks(rule: CommandRule, title: string): boolean {
+  return rule.changes && !/(\.\.\.|…)$/.test(title.trim());
 }
 
 /** The contract that lists the view, or undefined. */

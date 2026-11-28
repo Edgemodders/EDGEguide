@@ -6,7 +6,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { readContracts } from "./contract";
+import { findCommand, pressAsks, readContracts } from "./contract";
 import { createOAuth, type OAuth, type PendingRequest } from "./oauth";
 import { createServer, DefaultPort, type GuideServer, type ServerState } from "./server";
 import { buildServer, type TourStep, type Ui } from "./tools";
@@ -106,6 +106,24 @@ const ui: Ui = {
   },
 };
 
+/**
+ * The modder pressed a step's button in the panel: the same as choosing it in its menu. It is checked
+ * against the contracts again, and one that may change things asks first (pressAsks), so it runs only
+ * after the modder's OK. Never called by Claude: only the panel's button calls it.
+ */
+async function pressButton(button: NonNullable<TourStep["button"]>) {
+  const found = findCommand(ui.contracts(), button.command);
+  if (!found) throw new Error(`${button.title} is no longer there: its extension may have been updated or removed.`);
+  if (pressAsks(found.rule, button.title)) {
+    const what = found.rule.hint ?? `${button.title}. This may change files or the game folder.`;
+    const pick = await vscode.window.showWarningMessage(`${button.title}?`, { modal: true, detail: what }, "OK");
+    if (pick !== "OK") return;
+  }
+  void Promise.resolve(vscode.commands.executeCommand(button.command)).catch((err) =>
+    vscode.window.showErrorMessage(`${button.title}: ${(err as Error).message || String(err)}`),
+  );
+}
+
 /** Opens a tour step's place. A command here changes nothing (ui_tour checked it); it is not waited for. */
 async function showStep(step: TourStep) {
   if (step.view) await ui.focusView(step.view);
@@ -120,7 +138,7 @@ export function activate(context: vscode.ExtensionContext) {
   const version = String(context.extension.packageJSON.version ?? "0.0.0");
 
   // Past tours are kept for the modder, across windows and restarts (the extension's global state).
-  tour = new Tour(showStep, say, context.globalState);
+  tour = new Tour(showStep, say, context.globalState, pressButton);
   context.subscriptions.push(tour, vscode.window.registerWebviewViewProvider(TourViewId, tour, { webviewOptions: { retainContextWhenHidden: true } }));
 
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 0);

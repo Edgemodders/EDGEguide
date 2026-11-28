@@ -1,6 +1,7 @@
 // The tour in the editor (design, "Tours"): the EDGEguide panel shows one step's note with Back,
 // Next and Close, and each step opens its place. VS Code hides an extension's toast after 10 s, so
-// the note lives in a panel that stays. In a file, the note also sits at its line.
+// the note lives in a panel that stays. In a file, the note also sits at its line. A step's button has
+// a copy in the panel that the modder can press (extension.ts asks first when it changes things).
 
 import * as crypto from "node:crypto";
 import * as vscode from "vscode";
@@ -47,7 +48,22 @@ export class Tour implements vscode.WebviewViewProvider {
     private readonly show: (step: TourStep) => Promise<void>,
     private readonly say: (line: string) => void,
     private readonly store: vscode.Memento,
+    /** Runs the step's button when the modder presses its copy in the panel; asks first when it changes things. */
+    private readonly press: (button: NonNullable<TourStep["button"]>) => Promise<void>,
   ) {}
+
+  private async pressed() {
+    const button = this.status === "showing" ? this.steps[this.at]?.button : undefined;
+    if (!button) return;
+    this.problem = undefined;
+    try {
+      await this.press(button);
+    } catch (err) {
+      this.problem = (err as Error).message || String(err);
+      this.say(`tour step ${this.at + 1}, ${button.command}: ${this.problem}`);
+      this.post();
+    }
+  }
 
   private history(): PastTour[] {
     const kept = this.store.get<unknown>(HistoryKey);
@@ -160,6 +176,7 @@ export class Tour implements vscode.WebviewViewProvider {
     view.webview.html = page(view.webview.cspSource);
     view.webview.onDidReceiveMessage((m: { type?: string; when?: unknown }) => {
       if (m.type === "ready") this.post();
+      else if (m.type === "press") void this.pressed();
       else if (m.type === "replay" && typeof m.when === "string") void this.replay(m.when);
       else if (m.type === "delete" && typeof m.when === "string") void this.remove(m.when);
       else if (m.type === "next") void this.go(this.at + 1);
@@ -189,6 +206,8 @@ function page(cspSource: string): string {
   #button { margin: 0 0 10px; }
   #button b { padding: 1px 8px; border-radius: 3px; background: var(--vscode-badge-background); color: var(--vscode-badge-foreground); }
   #problem { color: var(--vscode-errorForeground); margin: 0 0 8px; }
+  #pressRow { margin: 0 0 10px; }
+  #pressRow small { opacity: 0.7; }
   .row { display: flex; gap: 8px; }
   button { font-family: inherit; font-size: 1em; padding: 4px 14px; border: none; border-radius: 2px; cursor: pointer;
     background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
@@ -211,6 +230,7 @@ function page(cspSource: string): string {
   <div id="count"></div>
   <p id="text"></p>
   <p id="button" hidden>Look for <b></b><span id="place"></span></p>
+  <p id="pressRow" hidden><button id="press" title="The same as choosing it there. It asks you first when it changes something."></button> <small>or press it here</small></p>
   <p id="problem" hidden></p>
   <div class="row">
     <button id="back" class="secondary">Back</button>
@@ -228,7 +248,7 @@ function page(cspSource: string): string {
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
   const $ = (id) => document.getElementById(id);
-  for (const id of ["back", "next", "close"]) $(id).addEventListener("click", () => vscode.postMessage({ type: id }));
+  for (const id of ["back", "next", "close", "press"]) $(id).addEventListener("click", () => vscode.postMessage({ type: id }));
   $("list").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-act]");
     if (b) vscode.postMessage({ type: b.dataset.act, when: b.dataset.when });
@@ -272,6 +292,8 @@ function page(cspSource: string): string {
     $("button").hidden = !m.button;
     $("button").querySelector("b").textContent = m.button || "";
     $("place").textContent = m.place ? ": " + m.place : "";
+    $("pressRow").hidden = !m.button;
+    $("press").textContent = m.button || "";
     $("problem").hidden = !m.problem;
     $("problem").textContent = m.problem ? "Couldn't open this step's place: " + m.problem : "";
     $("back").disabled = m.at <= 1;

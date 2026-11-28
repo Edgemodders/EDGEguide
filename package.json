@@ -2,7 +2,7 @@
   "name": "edgeguide",
   "displayName": "EDGEguide",
   "description": "Lets Claude Code show you the EDGE tools for Cyberpunk 2077 modding in your editor: it opens the right view, and runs the tools' own commands while you watch, asking before anything that changes files.",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "publisher": "edgemodders",
   "license": "MIT",
   "preview": true,
