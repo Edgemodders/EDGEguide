@@ -206,7 +206,17 @@ describe("EDGEguide's server", () => {
     ]);
     assert.deepEqual(ran, [], "the tour ran nothing on its own");
     await client.callTool({ name: "ui_tour", arguments: { steps: [{ text: "These are the game's own files, from every archive. Open a folder to see inside it.", view: "edgedeck.mods" }] } });
-    assert.deepEqual(titles, ["Check for clashes and deploy", "These are the game's own files, from every..."], "no title: the first note, cut at a word");
+    const question = "So I have a bunch of mods from Nexus and I think two of them fight over the same files, how do I find out and fix it?";
+    await client.callTool({ name: "ui_tour", arguments: { title: question, steps: [{ text: "x", view: "edgedeck.mods" }] } });
+    assert.deepEqual(
+      titles,
+      [
+        "Check for clashes and deploy",
+        "These are the game's own files, from every archive. Open a folder to see inside...",
+        "So I have a bunch of mods from Nexus and I think two of them fight over the same...",
+      ],
+      "no title: the first note; a long one cut at a word",
+    );
 
     await client.callTool({ name: "ui_open", arguments: { view: "edgedeck.mods" } });
     assert.deepEqual(shown, ["edgedeck.mods"]);

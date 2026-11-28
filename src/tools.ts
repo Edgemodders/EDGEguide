@@ -35,13 +35,17 @@ export interface TourStep {
 /** The most steps a tour takes. More than a few is a lesson, not a tour. */
 export const MaxTourSteps = 8;
 
-/** A title for a tour Claude gave none: its first note, cut at a word near 50 characters. */
-export function tourTitle(firstText: string): string {
-  const t = firstText.replace(/\s+/g, " ").trim();
-  if (t.length <= 50) return t;
-  const cut = t.slice(0, 50);
+/** The longest title the past tours list shows. */
+export const TitleLength = 80;
+
+/** A tour's title on one line, cut at a word near TitleLength characters: Claude's, else the first note. */
+export function tourTitle(text: string): string {
+  const t = text.replace(/\s+/g, " ").trim();
+  if (t.length <= TitleLength) return t;
+  // One character more, so a word that ends right at the limit, before a space, is kept.
+  const cut = t.slice(0, TitleLength + 1);
   const space = cut.lastIndexOf(" ");
-  return `${(space > 20 ? cut.slice(0, space) : cut).replace(/[\s.,;:]+$/, "")}...`;
+  return `${(space > 20 ? cut.slice(0, space) : cut.slice(0, TitleLength)).replace(/[\s.,;:]+$/, "")}...`;
 }
 
 // Claude Code asks the modder before every call of a tool with this flag, in every permission mode.
@@ -51,7 +55,7 @@ const AskFirst = { "anthropic/requiresUserInteraction": true };
 
 export const Instructions = `EDGEguide shows the modder the EDGE tools in their editor (EDGEkit or VS Code): it opens views and files, and runs the EDGE extensions' own commands while the modder watches, so they learn where things are.
 Use it to show, not to do the work: the EDGE servers (redcode, edgedeck, edgemat, edgewave, rednode) stay the way to read and change things.
-When the modder asks how to do something in the EDGE tools, or where something is, show them with ui_tour instead of explaining at length: 2 to 5 steps, each one or two short sentences, at the view, file or button it is about. Then answer in one short line, such as "I've put the steps in the editor: press Next to go on." Do not repeat the steps in the chat. The modder need not know EDGEguide's name: say "the steps in the editor".
+When the modder asks how to do something in the EDGE tools, or where something is, show them with ui_tour instead of explaining at length: 2 to 5 steps, each one or two short sentences, at the view, file or button it is about. Title the tour with the modder's question (their words, or a short summary). Then answer in one short line, such as "I've put the steps in the editor: press Next to go on." Do not repeat the steps in the chat. The modder need not know EDGEguide's name: say "the steps in the editor".
 - ui_state: what the editor has open, the tour and the step the modder is on, and for each EDGE extension the views EDGEguide can open and the commands it can run, with each command's button name. Look first.
 - ui_tour: a short tour in the editor. Each step opens its place and shows its note with Back, Next and Close. A tour changes nothing: for a step that does (such as Deploy), point at its button and let the modder press it.
 - ui_open: shows a view (such as edgedeck.mods or redcode.project), opens a file at a line, or runs a command that changes nothing (such as edgedeck.openPage).
@@ -147,9 +151,13 @@ export function buildServer(ui: Ui, version: string): McpServer {
     "ui_tour",
     {
       title: "Show steps in the editor",
-      description: `Shows the modder a short tour in the editor, one step at a time, with Back, Next and Close; it answers at once and the modder moves on with Next (ui_state says where they are). Each step is a note of one or two short sentences, with at most one place to show: a view (from ui_state), a file (an absolute path, with line), or a command that changes nothing (${listed(contracts, false)}), run when the step shows. A step may name the button it is about (button: any command id ui_state lists, such as edgedeck.deploy): the note shows its name and where it is (ui_state's "where"), and the modder presses it; the tour never runs it. A step with a button should also show its view, so the button is on screen. Give it a title of a few words; the modder can replay past tours by it. A new tour replaces the one showing. Changes nothing, so it does not ask. Afterwards answer in one short line; do not repeat the steps.`,
+      description: `Shows the modder a short tour in the editor, one step at a time, with Back, Next and Close; it answers at once and the modder moves on with Next (ui_state says where they are). Each step is a note of one or two short sentences, with at most one place to show: a view (from ui_state), a file (an absolute path, with line), or a command that changes nothing (${listed(contracts, false)}), run when the step shows. A step may name the button it is about (button: any command id ui_state lists, such as edgedeck.deploy): the note shows its name and where it is (ui_state's "where"), and the modder presses it; the tour never runs it. A step with a button should also show its view, so the button is on screen. Give it a title: the modder's question, in their words when short, else a short summary of it; the modder replays past tours by it. A new tour replaces the one showing. Changes nothing, so it does not ask. Afterwards answer in one short line; do not repeat the steps.`,
       inputSchema: {
-        title: z.string().max(60).optional().describe("A few words naming the tour, such as: Check for clashes and deploy. The modder replays past tours by it"),
+        title: z
+          .string()
+          .max(300)
+          .optional()
+          .describe(`The modder's question this tour answers: in their own words when it is short, else a short summary of it, such as: How do I check my mods clash and deploy them? Up to ${TitleLength} characters (longer is cut at a word). The modder replays past tours by it`),
         steps: z
           .array(
             z.object({
@@ -195,7 +203,7 @@ export function buildServer(ui: Ui, version: string): McpServer {
             ...(button ? { button } : {}),
           });
         }
-        await ui.startTour(checked, title?.trim() || tourTitle(checked[0].text));
+        await ui.startTour(checked, tourTitle(title?.trim() || checked[0].text));
         return text(`The modder sees step 1 of ${checked.length} in the editor and moves on with Next. Answer in one short line; do not repeat the steps.`);
       }),
   );

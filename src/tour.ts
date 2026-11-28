@@ -172,6 +172,7 @@ function page(cspSource: string): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style nonce="${nonce}">
   body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 10px 14px; margin: 0; }
+  #title { font-weight: 600; margin-bottom: 2px; }
   #count { font-size: 0.85em; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.05em; }
   #text { font-size: 1.15em; line-height: 1.45; margin: 6px 0 8px; max-width: 60em; }
   #button { margin: 0 0 10px; }
@@ -195,6 +196,7 @@ function page(cspSource: string): string {
 </head>
 <body>
 <div id="tour" hidden>
+  <div id="title"></div>
   <div id="count"></div>
   <p id="text"></p>
   <p id="button" hidden>Look for <b></b><span id="place"></span></p>
@@ -248,7 +250,9 @@ function page(cspSource: string): string {
     if (m.status === "done") $("idle").textContent = "That's all the steps. Ask Claude if you want to see more.";
     else if (m.status === "closed") $("idle").textContent = "Tour closed. Ask Claude any time to show you something.";
     if (!showing) return showPast(m.past || []);
-    $("count").textContent = (m.title ? m.title + " · " : "") + "Step " + m.at + " of " + m.of;
+    $("title").textContent = m.title || "";
+    $("title").hidden = !m.title;
+    $("count").textContent = "Step " + m.at + " of " + m.of;
     $("text").textContent = m.text;
     $("button").hidden = !m.button;
     $("button").querySelector("b").textContent = m.button || "";
