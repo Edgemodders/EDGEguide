@@ -100,9 +100,9 @@ const ui: Ui = {
     return summarize(first.r);
   },
 
-  async startTour(steps) {
+  async startTour(steps, title) {
     if (!tour) throw new Error("The tour panel is not ready yet.");
-    await tour.start(steps);
+    await tour.start(steps, title);
   },
 };
 
@@ -119,7 +119,8 @@ export function activate(context: vscode.ExtensionContext) {
   const say = (line: string) => log.appendLine(`${new Date().toISOString()} ${line}`);
   const version = String(context.extension.packageJSON.version ?? "0.0.0");
 
-  tour = new Tour(showStep, say);
+  // Past tours are kept for the modder, across windows and restarts (the extension's global state).
+  tour = new Tour(showStep, say, context.globalState);
   context.subscriptions.push(tour, vscode.window.registerWebviewViewProvider(TourViewId, tour, { webviewOptions: { retainContextWhenHidden: true } }));
 
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 0);

@@ -64,13 +64,14 @@ describe("EDGEguide's server", () => {
   const ran: string[] = [];
   const shown: string[] = [];
   const tours: TourStep[][] = [];
+  const titles: string[] = [];
   const ui: Ui = {
     contracts: () => readContracts([deck]),
     state: async () => ({ editor: { app: "Test", focused: true }, tabs: [] }),
     focusView: async (v) => void shown.push(v),
     openFile: async (f) => void shown.push(f),
     run: async (c) => void ran.push(c),
-    startTour: async (steps) => void tours.push(steps),
+    startTour: async (steps, title) => void (tours.push(steps), titles.push(title)),
   };
 
   before(async () => {
@@ -183,6 +184,7 @@ describe("EDGEguide's server", () => {
     const ok = await client.callTool({
       name: "ui_tour",
       arguments: {
+        title: " Check for clashes and deploy ",
         steps: [
           { text: " These are your mods. ", view: "edgedeck.mods" },
           { text: "This lists clashes.", command: "edgedeck.checkConflicts" },
@@ -203,6 +205,8 @@ describe("EDGEguide's server", () => {
       ],
     ]);
     assert.deepEqual(ran, [], "the tour ran nothing on its own");
+    await client.callTool({ name: "ui_tour", arguments: { steps: [{ text: "These are the game's own files, from every archive. Open a folder to see inside it.", view: "edgedeck.mods" }] } });
+    assert.deepEqual(titles, ["Check for clashes and deploy", "These are the game's own files, from every..."], "no title: the first note, cut at a word");
 
     await client.callTool({ name: "ui_open", arguments: { view: "edgedeck.mods" } });
     assert.deepEqual(shown, ["edgedeck.mods"]);

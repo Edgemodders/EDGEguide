@@ -7,6 +7,7 @@ import * as vscode from "vscode";
 import type { TourStep } from "./tools";
 
 export interface TourState {
+  title: string;
   /** The step showing, from 1; 0 before the first. */
   at: number;
   of: number;
@@ -16,9 +17,22 @@ export interface TourState {
 
 export const TourViewId = "edgeguide.tour";
 
+/** A past tour, kept so the modder can replay it. */
+interface PastTour {
+  title: string;
+  steps: TourStep[];
+  /** When it was first shown, as an ISO date. */
+  when: string;
+}
+
+/** How many past tours the panel keeps, newest first. */
+export const KeptTours = 10;
+const HistoryKey = "edgeguide.tours";
+
 export class Tour implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
   private steps: TourStep[] = [];
+  private title = "";
   private at = 0;
   private status: TourState["status"] | undefined;
   private problem: string | undefined;
@@ -28,11 +42,17 @@ export class Tour implements vscode.WebviewViewProvider {
     after: { margin: "0 0 0 2em", color: new vscode.ThemeColor("editorCodeLens.foreground"), fontStyle: "italic" },
   });
 
-  /** show opens a step's place (a view, a file at a line, a command that changes nothing). */
+  /** show opens a step's place (a view, a file at a line, a command that changes nothing); past tours are kept in store. */
   constructor(
     private readonly show: (step: TourStep) => Promise<void>,
     private readonly say: (line: string) => void,
+    private readonly store: vscode.Memento,
   ) {}
+
+  private history(): PastTour[] {
+    const kept = this.store.get<unknown>(HistoryKey);
+    return Array.isArray(kept) ? kept.filter((t): t is PastTour => !!t && typeof t.title === "string" && Array.isArray(t.steps) && t.steps.length > 0) : [];
+  }
 
   dispose() {
     this.note.dispose();
@@ -41,13 +61,33 @@ export class Tour implements vscode.WebviewViewProvider {
   state(): TourState | null {
     if (!this.status) return null;
     const step = this.steps[this.at];
-    return { at: this.status === "showing" ? this.at + 1 : 0, of: this.steps.length, status: this.status, ...(this.status === "showing" && step ? { text: step.text } : {}) };
+    return {
+      title: this.title,
+      at: this.status === "showing" ? this.at + 1 : 0,
+      of: this.steps.length,
+      status: this.status,
+      ...(this.status === "showing" && step ? { text: step.text } : {}),
+    };
   }
 
-  async start(steps: TourStep[]) {
+  /** A new tour from Claude: kept at the top of the past tours, then shown. */
+  async start(steps: TourStep[], title: string) {
+    const past = [{ title, steps, when: new Date().toISOString() }, ...this.history()].slice(0, KeptTours);
+    await this.store.update(HistoryKey, past);
+    await this.run(steps, title);
+  }
+
+  /** A past tour again, from its Replay button: the list keeps its order. */
+  private async replay(i: number) {
+    const past = this.history()[i];
+    if (past) await this.run(past.steps, past.title);
+  }
+
+  private async run(steps: TourStep[], title: string) {
     this.steps = steps;
+    this.title = title;
     this.status = "showing";
-    this.say(`tour: ${steps.length} steps`);
+    this.say(`tour "${title}": ${steps.length} steps`);
     // Open the panel first, so the step's own place can take the focus after it.
     await vscode.commands.executeCommand(`${TourViewId}.focus`);
     await this.go(0);
@@ -93,6 +133,8 @@ export class Tour implements vscode.WebviewViewProvider {
     void this.view?.webview.postMessage({
       type: "step",
       status: this.status ?? "none",
+      title: this.title,
+      past: this.history().map((t) => ({ title: t.title, steps: t.steps.length })),
       at: this.at + 1,
       of: this.steps.length,
       text: step?.text ?? "",
@@ -106,8 +148,9 @@ export class Tour implements vscode.WebviewViewProvider {
     this.view = view;
     view.webview.options = { enableScripts: true, localResourceRoots: [] };
     view.webview.html = page(view.webview.cspSource);
-    view.webview.onDidReceiveMessage((m: { type?: string }) => {
+    view.webview.onDidReceiveMessage((m: { type?: string; index?: unknown }) => {
       if (m.type === "ready") this.post();
+      else if (m.type === "replay" && typeof m.index === "number") void this.replay(m.index);
       else if (m.type === "next") void this.go(this.at + 1);
       else if (m.type === "back") void this.go(this.at - 1);
       else if (m.type === "close") this.end("closed");
@@ -142,6 +185,12 @@ function page(cspSource: string): string {
   button.secondary:hover { background: var(--vscode-button-secondaryHoverBackground); }
   button:disabled { opacity: 0.4; cursor: default; }
   [hidden] { display: none !important; }
+  #past h3 { font-size: 0.85em; font-weight: normal; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.05em; margin: 12px 0 4px; }
+  #past ol { margin: 0; padding-left: 1.6em; }
+  #past li { margin: 3px 0; }
+  #past li span { margin-right: 10px; }
+  #past li small { opacity: 0.7; margin-right: 10px; }
+  #past button { padding: 1px 10px; font-size: 0.9em; }
 </style>
 </head>
 <body>
@@ -156,21 +205,50 @@ function page(cspSource: string): string {
     <button id="close" class="secondary">Close</button>
   </div>
 </div>
-<p id="idle">Ask Claude how to do something in the EDGE tools, and the steps show here.</p>
+<div id="rest">
+  <p id="idle">Ask Claude how to do something in the EDGE tools, and the steps show here.</p>
+  <div id="past" hidden>
+    <h3>Past tours</h3>
+    <ol id="list"></ol>
+  </div>
+</div>
 <script nonce="${nonce}">
   const vscode = acquireVsCodeApi();
   const $ = (id) => document.getElementById(id);
   for (const id of ["back", "next", "close"]) $(id).addEventListener("click", () => vscode.postMessage({ type: id }));
+  $("list").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-index]");
+    if (b) vscode.postMessage({ type: "replay", index: Number(b.dataset.index) });
+  });
+  function showPast(past) {
+    const list = $("list");
+    list.replaceChildren();
+    past.forEach((t, i) => {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      name.textContent = t.title;
+      const n = document.createElement("small");
+      n.textContent = t.steps === 1 ? "1 step" : t.steps + " steps";
+      const b = document.createElement("button");
+      b.className = "secondary";
+      b.textContent = "Replay";
+      b.dataset.index = String(i);
+      b.title = "Show this tour again";
+      li.append(name, n, b);
+      list.append(li);
+    });
+    $("past").hidden = past.length === 0;
+  }
   window.addEventListener("message", (e) => {
     const m = e.data;
     if (!m || m.type !== "step") return;
     const showing = m.status === "showing";
     $("tour").hidden = !showing;
-    $("idle").hidden = showing;
+    $("rest").hidden = showing;
     if (m.status === "done") $("idle").textContent = "That's all the steps. Ask Claude if you want to see more.";
     else if (m.status === "closed") $("idle").textContent = "Tour closed. Ask Claude any time to show you something.";
-    if (!showing) return;
-    $("count").textContent = "Step " + m.at + " of " + m.of;
+    if (!showing) return showPast(m.past || []);
+    $("count").textContent = (m.title ? m.title + " · " : "") + "Step " + m.at + " of " + m.of;
     $("text").textContent = m.text;
     $("button").hidden = !m.button;
     $("button").querySelector("b").textContent = m.button || "";
